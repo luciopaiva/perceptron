@@ -59,7 +59,7 @@ class LinearClassification {
     guess() {
         for (const point of this.points) {
             const guessedLabel = this.perceptron.guess(point.x, point.y, point.bias);
-            this.drawPoint(point.x, point.y, true, MARKER_RADIUS, guessedLabel === point.label ? "green" : "red");
+            this.drawPoint(point.x, point.y, point.label === 1, POINT_RADIUS, guessedLabel === point.label ? "green" : "red");
         }
     }
 
@@ -262,13 +262,16 @@ class LinearClassification {
      */
     drawPoint(x, y, shouldFill, radius = POINT_RADIUS, color = "black") {
         this.dataContext.beginPath();
-        this.dataContext.arc(this.mapToViewX(x), this.mapToViewY(y), radius, 0, PI_2);
+        this.dataContext.fillStyle = color;
+
+        const mx = this.mapToViewX(x);
+        const my = this.mapToViewY(y);
+
         if (shouldFill) {
-            this.dataContext.fillStyle = color;
+            this.dataContext.arc(mx, my, radius, 0, PI_2);
             this.dataContext.fill();
         } else {
-            this.dataContext.strokeStyle = color;
-            this.dataContext.stroke();
+            this.dataContext.fillRect(mx - radius, my - radius, 2 * radius, 2 * radius);
         }
     }
 }
