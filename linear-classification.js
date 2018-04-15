@@ -1,9 +1,15 @@
 
 const
+    LEARNING_RATE = 0.0005,  // so it doesn't overshoot during training
     PI_2 = Math.PI * 2,
     POINT_RADIUS = 5,
-    MARKER_RADIUS = 3,
     LINE_TRAIL_LENGTH = 50,
+    CLASS_CIRCLE = 1,
+    CLASS_SQUARE = -1,
+    DOMAIN_HORIZONTAL_RANGE = [-1, 1],
+    DOMAIN_VERTICAL_RANGE = [-1, 1],
+    SLOPE_RANGE = [-10, 10],  // slopes can be very steep
+    INTERCEPT_RANGE = DOMAIN_HORIZONTAL_RANGE.map(val => val / 2),  // keep it not very far from the screen center
     NUMBER_OF_POINTS = 1000;
 
 class Point {
@@ -28,45 +34,85 @@ class LinearClassification {
         this.CANVAS_WIDTH = side;
         this.CANVAS_HEIGHT = side;
 
-        this.realSlope = random(-1, 1);
-        this.realIntercept = random(-1, 1);
+        // everything above this line will be circle; everything below will be square
+        this.actualSlope = random(...SLOPE_RANGE);
+        this.actualIntercept = random(...INTERCEPT_RANGE);
 
-        /** @type {[Number, Number, Number, Number][]} */
+        /** @type {[Number, Number, Number, Number][]} animate while the perceptron converges to the correct guess */
         this.guessLineTrail = [];
+        /** @type {Boolean} used to make the animation stop (nothing else to animate after the solution is found) */
         this.foundSolution = false;
 
-        this.perceptron = new Perceptron(3);  // x and y coordinates + bias
+        const initialWeights = [random(...SLOPE_RANGE), random(...SLOPE_RANGE), random(...DOMAIN_HORIZONTAL_RANGE)];
+        /** our "brain" */
+        this.perceptron = new Perceptron(LEARNING_RATE, ...initialWeights);
+
+        /** @type {Number[]} keeps track of the error progression (which will eventually converge to zero) */
         this.errorHistory = [];
 
-        this.initializeModel();
-        this.initializeView();
+        /** @type {Point[]} spread some points across the plane */
+        this.points = Array.from(Array(NUMBER_OF_POINTS), () => {
+            const x = random(...DOMAIN_HORIZONTAL_RANGE);
+            const y = random(...DOMAIN_VERTICAL_RANGE);
+            const label = this.classifyPoint(x, y);
+            return new Point(x, y, label);
+        });
+
+        // --- view bindings ---
+
+        // draw green line corresponding to correct answer
+        this.dataCanvas = this.makeCanvas();
+        this.dataContext = this.dataCanvas.getContext("2d");
+        this.drawActualClassificationLine();
+
+        // draw red line corresponding to perceptron's guess
+        this.guessCanvas = this.makeCanvas();
+        this.guessContext = this.guessCanvas.getContext("2d");
+        this.drawGuessLine();
+
+        // bind training button
+        this.trainingButton = document.getElementById("training-button");
+        this.trainingButton.addEventListener("click", () => {
+            this.trainingButton.disabled = true;
+            this.trainAndUpdateView();
+        });
+
+        // bind metrics reporting labels
+        this.trainingCounter = document.getElementById("training-counter");
+        this.errorProgressionElement = document.getElementById("error-progression");
+        this.weight0Element = document.getElementById("weight-0");
+        this.weight1Element = document.getElementById("weight-1");
+        this.weightBiasElement = document.getElementById("weight-bias");
+        this.reportPerceptronWeights();
+
+        this.actualFunctionElement = document.getElementById("actual-function");
+        this.actualFunctionElement.innerText =
+            LinearClassification.functionToString(this.actualSlope, this.actualIntercept);
+        this.guessedFunctionElement = document.getElementById("guessed-function");
 
         this.guess();
     }
 
     realFunction(x) {
-        return this.realSlope * x + this.realIntercept;
+        return this.actualSlope * x + this.actualIntercept;
     }
 
     classifyPoint(x, y) {
         const lineY = this.realFunction(x);
-        return y > lineY ? +1 : -1;
+        return y > lineY ? CLASS_CIRCLE : CLASS_SQUARE;
     }
 
-    /**
-     * @private
-     */
     guess() {
         for (const point of this.points) {
             const guessedLabel = this.perceptron.guess(point.x, point.y, point.bias);
-            this.drawPoint(point.x, point.y, point.label === 1, POINT_RADIUS, guessedLabel === point.label ? "green" : "red");
+            const rightGuess = guessedLabel === point.label;
+            this.drawPoint(point.x, point.y, point.label, POINT_RADIUS, rightGuess ? "green" : "red");
         }
+
+        this.updateGuessView();
     }
 
-    /**
-     * @private
-     */
-    train() {
+    trainAndUpdateView() {
         if (!this.foundSolution) {
             let accumulatedError = 0;
             for (const point of this.points) {
@@ -80,80 +126,31 @@ class LinearClassification {
             this.errorHistory.push(accumulatedError);
             this.errorProgressionElement.innerText = this.errorHistory.join(", ");
             this.reportPerceptronWeights();
-            this.updateGuessView();
 
-            if (accumulatedError === 0) {
-                this.foundSolution = true;
-            }
+            this.foundSolution = accumulatedError === 0;
         } else {
-            // if the solution was found, start killing the trail and let it fade away
+            // if the solution was found, progressively fade the trail away until it disappears
             this.guessLineTrail.shift();
             this.drawGuessLine();
         }
 
         if (!this.foundSolution || this.guessLineTrail.length > 0) {
             // do not continue if the solution was found and the trail is completely gone
-            window.requestAnimationFrame(this.train.bind(this));
+            window.requestAnimationFrame(this.trainAndUpdateView.bind(this));
         }
     }
 
-    /**
-     * @private
-     */
-    initializeModel() {
-        this.points = Array.from(Array(NUMBER_OF_POINTS), () => {
-            const x = random(-1, 1);
-            const y = random(-1, 1);
-            const label = this.classifyPoint(x, y);
-            return new Point(x, y, label);
-        });
-    }
-
     mapToViewX(value) {
-        return map(value, -1, 1, 0, this.CANVAS_WIDTH);
+        return map(value, DOMAIN_HORIZONTAL_RANGE[0], DOMAIN_HORIZONTAL_RANGE[1], 0, this.CANVAS_WIDTH);
     }
 
     mapToViewY(value) {
-        return map(value, -1, 1, this.CANVAS_HEIGHT, 0);
-    }
-
-    /**
-     * @private
-     */
-    initializeView() {
-        this.dataCanvas = this.makeCanvas();
-        this.dataContext = this.dataCanvas.getContext("2d");
-        this.drawRealClassificationLine();
-
-        this.guessCanvas = this.makeCanvas();
-        this.guessContext = this.guessCanvas.getContext("2d");
-        this.drawGuessLine();
-
-        this.points.forEach(point => this.drawPoint(point.x, point.y, point.label === +1));
-
-        this.trainingButton = document.getElementById("training-button");
-        this.trainingButton.addEventListener("click", () => {
-            this.trainingButton.disabled = true;
-            this.train();
-        });
-
-        this.trainingCounter = document.getElementById("training-counter");
-        this.errorProgressionElement = document.getElementById("error-progression");
-        this.weight0Element = document.getElementById("weight-0");
-        this.weight1Element = document.getElementById("weight-1");
-        this.weightBiasElement = document.getElementById("weight-bias");
-        this.reportPerceptronWeights();
-
-        this.realFunctionElement = document.getElementById("real-function");
-        this.realFunctionElement.innerText = LinearClassification.functionToString(this.realSlope, this.realIntercept);
-        this.guessedFunctionElement = document.getElementById("guessed-function");
-        this.updateGuessView();
+        return map(value, DOMAIN_VERTICAL_RANGE[0], DOMAIN_VERTICAL_RANGE[1], this.CANVAS_HEIGHT, 0);
     }
 
     updateGuessView() {
-        const w0 = this.perceptron.weights[0];
-        const w1 = this.perceptron.weights[1];
-        const wb = this.perceptron.weights[2];
+        const [w0, w1, wb] = this.perceptron.weights;
+        // derived from linear equation: xw0 + yw1 + wb = 0
         const guessedSlope = -w0 / w1;
         const guessedIntercept = -wb / w1;
 
@@ -167,10 +164,8 @@ class LinearClassification {
     }
 
     drawGuessLine() {
-        const w0 = this.perceptron.weights[0];
-        const w1 = this.perceptron.weights[1];
-        const wb = this.perceptron.weights[2];  // bias
-        const f = (x) => (-x * w0 - wb) / w1;  // derived from linear function: xw0 + yw1 + wb = 0
+        const [w0, w1, wb] = this.perceptron.weights;
+        const f = (x) => (-x * w0 - wb) / w1;  // derived from linear equation: xw0 + yw1 + wb = 0
         const x0 = -1;
         const y0 = f(x0);
         const x1 = 1;
@@ -179,7 +174,7 @@ class LinearClassification {
         this.drawLine(this.guessContext, x0, y0, x1, y1, this.guessLineTrail, [255, 0, 0]);
     }
 
-    drawRealClassificationLine() {
+    drawActualClassificationLine() {
         const x0 = -1;
         const y0 = this.realFunction(x0);
         const x1 = 1;
@@ -187,9 +182,6 @@ class LinearClassification {
         this.drawLine(this.dataContext, x0, y0, x1, y1, null, [0, 200, 0]);
     }
 
-    /**
-     * @private
-     */
     reportPerceptronWeights() {
         this.weight0Element.innerText = this.perceptron.weights[0].toFixed(3);
         this.weight1Element.innerText = this.perceptron.weights[1].toFixed(3);
@@ -197,7 +189,6 @@ class LinearClassification {
     }
 
     /**
-     * @private
      * @return {HTMLCanvasElement}
      */
     makeCanvas() {
@@ -210,7 +201,6 @@ class LinearClassification {
     }
 
     /**
-     * @private
      * @param {CanvasRenderingContext2D} context - where to draw
      * @param {Number} x0
      * @param {Number} y0
@@ -253,21 +243,21 @@ class LinearClassification {
     }
 
     /**
-     * @private
      * @param {Number} x - point x coordinate
      * @param {Number} y - point y coordinate
-     * @param {Boolean} shouldFill - whether to fill or stroke the point
+     * @param {Number} label - to which class does this point belong
      * @param {Number} radius - point radius in pixels
      * @param {String} color - which color to stroke/fill the dot
      */
-    drawPoint(x, y, shouldFill, radius = POINT_RADIUS, color = "black") {
+    drawPoint(x, y, label, radius = POINT_RADIUS, color) {
         this.dataContext.beginPath();
         this.dataContext.fillStyle = color;
+        this.dataContext.strokeStyle = color;
 
         const mx = this.mapToViewX(x);
         const my = this.mapToViewY(y);
 
-        if (shouldFill) {
+        if (label === CLASS_CIRCLE) {
             this.dataContext.arc(mx, my, radius, 0, PI_2);
             this.dataContext.fill();
         } else {

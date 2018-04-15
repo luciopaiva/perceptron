@@ -55,7 +55,7 @@ body {
     content: "Bias: ";
 }
 
-#real-function::before {
+#actual-function::before {
     content: "Real function: ";
 }
 

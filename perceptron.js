@@ -2,13 +2,16 @@
 class Perceptron {
 
     /**
-     * @param {Number} numberOfInputs
+     * @param {Number} learningRate
+     * @param {...Number} initialWeights
      */
-    constructor (numberOfInputs) {
-        /** @type {Number} also takes into account the bias input */
-        this.numberOfInputs = numberOfInputs;
-        /** @type {Number[]} */
-        this.weights = Array.from(Array(this.numberOfInputs), () => random(-1, 1));
+    constructor (learningRate, ...initialWeights) {
+        /** @type {Number} */
+        this.learningRate = learningRate;
+
+        /** @type {Number[]} last weight should always be the bias */
+        this.weights = initialWeights;
+
         /** @type {Function} */
         this.activationFunction = (value) => value >= 0 ? +1 : -1;
     }
@@ -17,7 +20,7 @@ class Perceptron {
      * @param {...Number} inputs - perceptron inputs
      */
     guess(...inputs) {
-        if (inputs.length !== this.numberOfInputs) {
+        if (inputs.length !== this.weights.length) {
             throw new Error("Number of inputs doesn't match number of weights!");
         }
 
@@ -38,12 +41,9 @@ class Perceptron {
         const error = target - guess;
 
         for (let i = 0; i < inputs.length; i++) {
-            this.weights[i] += error * inputs[i] * Perceptron.LEARNING_RATE;
+            this.weights[i] += error * inputs[i] * this.learningRate;
         }
 
         return error;
     }
-
-    /** So it doesn't overshoot during training */
-    static get LEARNING_RATE() { return 0.00004; }
 }
