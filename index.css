@@ -1,0 +1,65 @@
+
+:root {
+    --button-bar-height: 40px;
+    --canvas-side: 500px;
+    font-family: sans-serif;
+}
+
+div {
+    /*border: 1px solid black;*/
+}
+
+body {
+    display: flex;
+    flex-direction: row;
+    /*justify-content: center;*/
+    align-items: flex-start;
+}
+
+#menu {
+    height: var(--button-bar-height);
+    width: var(--canvas-side);
+}
+
+#canvases-container {
+    position: relative;
+    width: calc(var(--canvas-side) + 10px);
+}
+
+#training-button {
+    height: 30px;
+    width: 100px;
+}
+
+#training-counter::before {
+    content: "Training iterations: ";
+}
+
+#error-progression::before {
+    content: "Error progression: [";
+}
+
+#error-progression::after {
+    content: "]";
+}
+
+#weight-0::before {
+    content: "Weight 0: ";
+}
+
+#weight-1::before {
+    content: "Weight 1: ";
+}
+
+#weight-bias::before {
+    content: "Bias: ";
+}
+
+canvas {
+    position: absolute;
+    width: var(--canvas-side);
+    height: var(--canvas-side);
+    /*top: 0; !* calc(10px + var(--button-bar-height)); *!*/
+    /*left: 10px;*/
+    border: 1px solid black;
+}
