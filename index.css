@@ -55,6 +55,14 @@ body {
     content: "Bias: ";
 }
 
+#real-function::before {
+    content: "Real function: ";
+}
+
+#guessed-function::before {
+    content: "Guessed function: ";
+}
+
 canvas {
     position: absolute;
     width: var(--canvas-side);

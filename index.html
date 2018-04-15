@@ -13,15 +13,19 @@
 <div id="menu">
     <p>A perceptron will be trained to tell points above the green line from points below it. Red markers show which
         points are not being correctly classified, while green markers show successfully classified ones.
-        Hit the button below and watch as the perceptron converges to minimize the error.</p>
+        Hit the button below and watch as the perceptron converges to minimize the error. The red line shows the
+        perceptron's current guess.</p>
     <button id="training-button">Start training</button>
     <p id="training-counter">0</p>
-    <p id="error-progression"></p>
     <p id="weight-0">0</p>
     <p id="weight-1">0</p>
     <p id="weight-bias">0</p>
+    <p id="real-function"></p>
+    <p id="guessed-function"></p>
+    <p id="error-progression"></p>
 </div>
 
+<script src="utils.js"></script>
 <script src="perceptron.js"></script>
 <script src="linear-classification.js"></script>
 
