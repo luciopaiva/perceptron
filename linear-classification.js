@@ -77,6 +77,12 @@ class LinearClassification {
             this.trainAndUpdateView();
         });
 
+        // bind reset button
+        this.resetButton = document.getElementById("reset-button");
+        this.resetButton.addEventListener("click", () => {
+            location.reload();  // easiest way to reset it
+        });
+
         // bind metrics reporting labels
         this.trainingCounter = document.getElementById("training-counter");
         this.errorProgressionElement = document.getElementById("error-progression");
