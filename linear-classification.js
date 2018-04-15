@@ -151,7 +151,7 @@ class LinearClassification {
      */
     drawPoint(x, y, shouldFill, radius = POINT_RADIUS, color = "black") {
         this.dataContext.beginPath();
-        this.dataContext.arc(x, y, radius, 0, 2 * Math.PI);
+        this.dataContext.arc(x, y, radius, 0, PI_2);
         if (shouldFill) {
             this.dataContext.fillStyle = color;
             this.dataContext.fill();
